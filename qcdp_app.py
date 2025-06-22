@@ -2,10 +2,10 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 
-st.set_page_config(page_title="QCDP Table Editor", layout="wide")
-st.title("📋 QCDP Inline Table Editor")
+st.set_page_config(page_title="QCDP Tracker", layout="wide")
+st.title("📋 QCDP Inline Table Editor (with Gravity & Impact Description)")
 
-# Initialize session data
+# Initialize topics list
 if "topics" not in st.session_state:
     st.session_state.topics = []
 
@@ -25,39 +25,60 @@ if st.button("➕ Add Topic"):
     }
     st.session_state.topics.append(new_topic)
 
-# Header row (table-like)
-header_cols = st.columns([
-    1.2, 2, 1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 1.5, 2, 1.5, 1.5, 1.5
-])
-headers = ["ID", "Type", "Q", "C", "D", "P", "ISS", "ECR", "APQP", "DEC", "FETE", "Desc", "Action", "Status", "DocInfo"]
-for col, text in zip(header_cols, headers):
-    col.markdown(f"**{text}**")
+# Header row (2-line style)
+st.markdown("#### 🧩 Editable QCDP Table")
+st.markdown("Each topic is a row. Q/C/D/P include Gravity + Impact Description.")
 
-# Rows: simulate editable table
+headers = [
+    "ID", "Type",
+    "Q Gravity", "Q Impact",
+    "C Gravity", "C Impact",
+    "D Gravity", "D Impact",
+    "P Gravity", "P Impact",
+    "ISS", "ECR", "APQP", "DEC", "FETE",
+    "Desc", "Com", "Action", "Status", "DocInfo"
+]
+
+col_widths = [1, 2] + [1, 2]*4 + [1]*6 + [2, 2, 2, 2, 2]
+cols = st.columns(col_widths[:len(headers)])
+for col, header in zip(cols, headers):
+    col.markdown(f"**{header}**")
+
+# Row display
 for i, topic in enumerate(st.session_state.topics):
-    cols = st.columns([
-        1.2, 2, 1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 1.5, 2, 1.5, 1.5, 1.5
-    ])
+    cols = st.columns(col_widths[:len(headers)])
+
     topic["ID"] = cols[0].text_input("ID", value=topic.get("ID", ""), key=f"id_{i}", disabled=True)
     topic["Type"] = cols[1].text_input("", value=topic.get("Type", ""), key=f"type_{i}")
 
-    # QCDP dropdowns
-    topic["Q"] = cols[2].selectbox("", ["", "Green", "Yellow", "Red"], index=["", "Green", "Yellow", "Red"].index(topic.get("Q", "")), key=f"q_{i}")
-    topic["C"] = cols[3].selectbox("", ["", "Green", "Yellow", "Red"], index=["", "Green", "Yellow", "Red"].index(topic.get("C", "")), key=f"c_{i}")
-    topic["D"] = cols[4].selectbox("", ["", "Green", "Yellow", "Red"], index=["", "Green", "Yellow", "Red"].index(topic.get("D", "")), key=f"d_{i}")
-    topic["P"] = cols[5].selectbox("", ["", "Green", "Yellow", "Red"], index=["", "Green", "Yellow", "Red"].index(topic.get("P", "")), key=f"p_{i}")
+    # Q
+    topic["Q"] = cols[2].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("Q", "")), key=f"q_{i}")
+    topic["Q_desc"] = cols[3].text_input("", value=topic.get("Q_desc", ""), key=f"qdesc_{i}")
 
-    topic["ISS"] = cols[6].text_input("", value=topic.get("ISS", ""), key=f"iss_{i}")
-    topic["ECR"] = cols[7].text_input("", value=topic.get("ECR", ""), key=f"ecr_{i}")
-    topic["APQP"] = cols[8].text_input("", value=topic.get("APQP", ""), key=f"apqp_{i}")
-    topic["DEC"] = cols[9].text_input("", value=topic.get("DEC", ""), key=f"dec_{i}")
-    topic["FETE"] = cols[10].text_input("", value=topic.get("FETE", ""), key=f"fete_{i}")
+    # C
+    topic["C"] = cols[4].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("C", "")), key=f"c_{i}")
+    topic["C_desc"] = cols[5].text_input("", value=topic.get("C_desc", ""), key=f"cdesc_{i}")
 
-    topic["Desc"] = cols[11].text_input("", value=topic.get("Desc", ""), key=f"desc_{i}")
-    topic["Action"] = cols[12].text_input("", value=topic.get("Action", ""), key=f"action_{i}")
-    topic["Status"] = cols[13].text_input("", value=topic.get("Status", ""), key=f"status_{i}")
-    topic["DocInfo"] = cols[14].text_input("", value=topic.get("DocInfo", ""), key=f"docinfo_{i}")
+    # D
+    topic["D"] = cols[6].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("D", "")), key=f"d_{i}")
+    topic["D_desc"] = cols[7].text_input("", value=topic.get("D_desc", ""), key=f"ddesc_{i}")
 
-# Optionally, show all in dataframe
-if st.checkbox("📋 Show data as table (read-only)"):
+    # P
+    topic["P"] = cols[8].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("P", "")), key=f"p_{i}")
+    topic["P_desc"] = cols[9].text_input("", value=topic.get("P_desc", ""), key=f"pdesc_{i}")
+
+    topic["ISS"] = cols[10].text_input("", value=topic.get("ISS", ""), key=f"iss_{i}")
+    topic["ECR"] = cols[11].text_input("", value=topic.get("ECR", ""), key=f"ecr_{i}")
+    topic["APQP"] = cols[12].text_input("", value=topic.get("APQP", ""), key=f"apqp_{i}")
+    topic["DEC"] = cols[13].text_input("", value=topic.get("DEC", ""), key=f"dec_{i}")
+    topic["FETE"] = cols[14].text_input("", value=topic.get("FETE", ""), key=f"fete_{i}")
+
+    topic["Desc"] = cols[15].text_input("", value=topic.get("Desc", ""), key=f"desc_{i}")
+    topic["Com"] = cols[16].text_input("", value=topic.get("Com", ""), key=f"com_{i}")
+    topic["Action"] = cols[17].text_input("", value=topic.get("Action", ""), key=f"action_{i}")
+    topic["Status"] = cols[18].text_input("", value=topic.get("Status", ""), key=f"status_{i}")
+    topic["DocInfo"] = cols[19].text_input("", value=topic.get("DocInfo", ""), key=f"docinfo_{i}")
+
+# Optional read-only data summary
+if st.checkbox("📊 Show full table (read-only)"):
     st.dataframe(pd.DataFrame(st.session_state.topics))
