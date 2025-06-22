@@ -25,10 +25,11 @@ if st.button("➕ Add Topic"):
     }
     st.session_state.topics.append(new_topic)
 
-# Header row (2-line style)
-st.markdown("#### 🧩 Editable QCDP Table")
-st.markdown("Each topic is a row. Q/C/D/P include Gravity + Impact Description.")
+# Gravity dropdown options
+gravity_options = ["", "A", "B", "C"]
 
+# Header row
+st.markdown("#### 🧩 Editable QCDP Table")
 headers = [
     "ID", "Type",
     "Q Gravity", "Q Impact",
@@ -44,7 +45,7 @@ cols = st.columns(col_widths[:len(headers)])
 for col, header in zip(cols, headers):
     col.markdown(f"**{header}**")
 
-# Row display
+# Each topic as row
 for i, topic in enumerate(st.session_state.topics):
     cols = st.columns(col_widths[:len(headers)])
 
@@ -52,19 +53,27 @@ for i, topic in enumerate(st.session_state.topics):
     topic["Type"] = cols[1].text_input("", value=topic.get("Type", ""), key=f"type_{i}")
 
     # Q
-    topic["Q"] = cols[2].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("Q", "")), key=f"q_{i}")
+    q_val = topic.get("Q", "")
+    q_idx = gravity_options.index(q_val) if q_val in gravity_options else 0
+    topic["Q"] = cols[2].selectbox("", gravity_options, index=q_idx, key=f"q_{i}")
     topic["Q_desc"] = cols[3].text_input("", value=topic.get("Q_desc", ""), key=f"qdesc_{i}")
 
     # C
-    topic["C"] = cols[4].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("C", "")), key=f"c_{i}")
+    c_val = topic.get("C", "")
+    c_idx = gravity_options.index(c_val) if c_val in gravity_options else 0
+    topic["C"] = cols[4].selectbox("", gravity_options, index=c_idx, key=f"c_{i}")
     topic["C_desc"] = cols[5].text_input("", value=topic.get("C_desc", ""), key=f"cdesc_{i}")
 
     # D
-    topic["D"] = cols[6].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("D", "")), key=f"d_{i}")
+    d_val = topic.get("D", "")
+    d_idx = gravity_options.index(d_val) if d_val in gravity_options else 0
+    topic["D"] = cols[6].selectbox("", gravity_options, index=d_idx, key=f"d_{i}")
     topic["D_desc"] = cols[7].text_input("", value=topic.get("D_desc", ""), key=f"ddesc_{i}")
 
     # P
-    topic["P"] = cols[8].selectbox("", ["", "A", "B", "C"], index=["", "A", "B", "C"].index(topic.get("P", "")), key=f"p_{i}")
+    p_val = topic.get("P", "")
+    p_idx = gravity_options.index(p_val) if p_val in gravity_options else 0
+    topic["P"] = cols[8].selectbox("", gravity_options, index=p_idx, key=f"p_{i}")
     topic["P_desc"] = cols[9].text_input("", value=topic.get("P_desc", ""), key=f"pdesc_{i}")
 
     topic["ISS"] = cols[10].text_input("", value=topic.get("ISS", ""), key=f"iss_{i}")
@@ -79,6 +88,6 @@ for i, topic in enumerate(st.session_state.topics):
     topic["Status"] = cols[18].text_input("", value=topic.get("Status", ""), key=f"status_{i}")
     topic["DocInfo"] = cols[19].text_input("", value=topic.get("DocInfo", ""), key=f"docinfo_{i}")
 
-# Optional read-only data summary
-if st.checkbox("📊 Show full table (read-only)"):
+# Optional summary
+if st.checkbox("📊 Show full data as table"):
     st.dataframe(pd.DataFrame(st.session_state.topics))
