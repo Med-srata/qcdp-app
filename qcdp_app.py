@@ -1,119 +1,109 @@
 import streamlit as st
 from datetime import datetime
 
-st.set_page_config(page_title="QCDP Tracker", layout="wide")
+st.set_page_config(page_title="QCDP Interactive Table", layout="wide")
 st.title("📋 QCDP Interactive Table")
 
-# Initialize topics state
+# Initialize session state for topics
+def initialize_topic(index):
+    return {
+        "ID": f"T-{index+1:03}",
+        "Type": "",
+        "Q": {"gravity": "", "desc": "", "expanded": False},
+        "C": {"gravity": "", "desc": "", "expanded": False},
+        "D": {"gravity": "", "desc": "", "expanded": False},
+        "P": {"gravity": "", "desc": "", "expanded": False},
+        "ISS": {"gravity": "", "status": "", "title": "", "target": "", "expanded": False},
+        "ECR": {
+            "type": "", "status": "", "instance": "", "title": "",
+            "instruction_date": None, "conception_date": None,
+            "officialisation_date": None, "demarrage_date": None,
+            "solde_date": None, "ready": False, "expanded": False
+        },
+        "APQP": {"reference": "", "status": "", "comment": "", "expanded": False},
+        "DEC": {"reference": "", "status": "", "comment": "", "expanded": False},
+        "FETE": {"reference": "", "status": "", "comment": "", "expanded": False},
+        "Desc": "",
+        "Status": ""
+    }
+
 if "topics" not in st.session_state:
     st.session_state.topics = []
 
-# Initialize edit states for dynamic columns
-editable_cols = ["q", "c", "d", "p", "iss", "ecr", "apqp", "dec", "fete"]
-for col in editable_cols:
-    st.session_state.setdefault(f"edit_{col}_index", None)
-
-# Add new topic row
+# Add topic
 if st.button("➕ Add Topic"):
-    st.session_state.topics.append({
-        "ID": f"T-{len(st.session_state.topics)+1:03}",
-        "Type": "",
-        "Q": "", "Q_desc": "",
-        "C": "", "C_desc": "",
-        "D": "", "D_desc": "",
-        "P": "", "P_desc": "",
-        "ISS": "", "ISS_status": "", "ISS_title": "", "ISS_target": "",
-        "ECR_type": "", "ECR_status": "", "ECR_instance": "", "ECR_title": "",
-        "ECR_instruction": None, "ECR_conception": None, "ECR_official": None,
-        "ECR_start": None, "ECR_solde": None, "ECR_ready": False,
-        "APQP_ref": "", "APQP_status": "", "APQP_comment": "",
-        "DEC_ref": "", "DEC_status": "", "DEC_comment": "",
-        "FETE_ref": "", "FETE_status": "", "FETE_comment": "",
-        "Desc": "", "Status": "", "Com": "", "Action": "", "DocInfo": ""
-    })
+    st.session_state.topics.append(initialize_topic(len(st.session_state.topics)))
 
-# Dropdown levels for Gravity
-gravity_levels = ["", "A", "B", "C"]
+# Column headers
+columns_labels = ["ID", "Type", "Q", "C", "D", "P", "ISS", "ECR", "APQP", "DEC", "FETE", "Desc", "Status"]
+col_widths = [1] * len(columns_labels)
+header_cols = st.columns(col_widths)
+for i, label in enumerate(columns_labels):
+    header_cols[i].markdown(f"**{label}**")
 
-# Table headers
-headers = ["ID", "Type", "Q", "C", "D", "P", "ISS", "ECR", "APQP", "DEC", "FETE", "Desc", "Status"]
-st.columns([1] * len(headers))
-for i, label in enumerate(headers):
-    st.columns(len(headers))[i].markdown(f"**{label}**")
+# Helper for dropdown panels
 
-# Function to handle Q/C/D/P cells
-def qcdp_cell(label, prefix, col, i, topic):
-    if st.session_state[f"edit_{prefix}_index"] == i:
-        topic[label] = col.selectbox("Gravity", gravity_levels, index=gravity_levels.index(topic[label]), key=f"{prefix}_val_{i}")
-        topic[f"{label}_desc"] = col.text_input("Impact Description", value=topic[f"{label}_desc"], key=f"{prefix}_desc_{i}")
-        if col.button("✅", key=f"{prefix}_save_{i}"):
-            st.session_state[f"edit_{prefix}_index"] = None
+def gravity_dropdown(col, field, topic, key_prefix):
+    if topic[field]["expanded"]:
+        topic[field]["gravity"] = col.selectbox("Gravity", ["", "A", "B", "C"], key=f"{key_prefix}_grav")
+        topic[field]["desc"] = col.text_area("Impact desc", key=f"{key_prefix}_desc")
     else:
-        display = f"{topic[label]}: {topic[f'{label}_desc'][:8]}" if topic[label] else label
-        if col.button(display, key=f"{prefix}_btn_{i}"):
-            st.session_state[f"edit_{prefix}_index"] = i
+        summary = topic[field]["gravity"] or ""
+        if col.button(summary or field, key=f"btn_{key_prefix}"):
+            topic[field]["expanded"] = True
 
-# Function for short 3-field boxes like APQP, DEC, FETE
-def short_edit(prefix, col, i, topic):
-    if st.session_state[f"edit_{prefix}_index"] == i:
-        topic[f"{prefix}_ref"] = col.text_input("Reference", value=topic[f"{prefix}_ref"], key=f"{prefix}_ref_{i}")
-        topic[f"{prefix}_status"] = col.text_input("Status", value=topic[f"{prefix}_status"], key=f"{prefix}_status_{i}")
-        topic[f"{prefix}_comment"] = col.text_input("Comment", value=topic[f"{prefix}_comment"], key=f"{prefix}_comment_{i}")
-        if col.button("✅", key=f"{prefix}_save_{i}"):
-            st.session_state[f"edit_{prefix}_index"] = None
+
+def iss_dropdown(col, topic, key_prefix):
+    if topic["ISS"]["expanded"]:
+        topic["ISS"]["gravity"] = col.selectbox("Gravity", ["", "A", "B", "C"], key=f"{key_prefix}_grav")
+        topic["ISS"]["status"] = col.text_input("Status", key=f"{key_prefix}_status")
+        topic["ISS"]["title"] = col.text_input("Title", key=f"{key_prefix}_title")
+        topic["ISS"]["target"] = col.text_input("Target", key=f"{key_prefix}_target")
     else:
-        s = f"{topic[f'{prefix}_ref']} | {topic[f'{prefix}_status']} | {topic[f'{prefix}_comment']}"
-        if col.button(s or prefix.upper(), key=f"{prefix}_btn_{i}"):
-            st.session_state[f"edit_{prefix}_index"] = i
+        if col.button("ISS", key=f"btn_{key_prefix}"):
+            topic["ISS"]["expanded"] = True
 
-# Main table rows
-for i, topic in enumerate(st.session_state.topics):
-    cols = st.columns(len(headers))
-    topic["ID"] = cols[0].text_input("", topic["ID"], key=f"id_{i}", disabled=True)
-    topic["Type"] = cols[1].text_input("", topic["Type"], key=f"type_{i}")
 
-    qcdp_cell("Q", "q", cols[2], i, topic)
-    qcdp_cell("C", "c", cols[3], i, topic)
-    qcdp_cell("D", "d", cols[4], i, topic)
-    qcdp_cell("P", "p", cols[5], i, topic)
-
-    # ISS
-    if st.session_state.edit_iss_index == i:
-        with cols[6]:
-            topic["ISS"] = st.selectbox("Gravity", gravity_levels, index=gravity_levels.index(topic["ISS"]), key=f"iss_grav_{i}")
-            topic["ISS_status"] = st.text_input("Status", value=topic["ISS_status"], key=f"iss_status_{i}")
-            topic["ISS_title"] = st.text_input("Title", value=topic["ISS_title"], key=f"iss_title_{i}")
-            topic["ISS_target"] = st.text_input("Target", value=topic["ISS_target"], key=f"iss_target_{i}")
-            if st.button("✅", key=f"iss_save_{i}"):
-                st.session_state.edit_iss_index = None
+def ecr_dropdown(col, topic, key_prefix):
+    if topic["ECR"]["expanded"]:
+        for field in ["type", "status", "instance", "title"]:
+            topic["ECR"][field] = col.text_input(field.capitalize(), key=f"{key_prefix}_{field}")
+        for field in ["instruction_date", "conception_date", "officialisation_date", "demarrage_date", "solde_date"]:
+            topic["ECR"][field] = col.date_input(field.replace("_", " ").capitalize(), key=f"{key_prefix}_{field}")
+        topic["ECR"]["ready"] = col.checkbox("Ready", key=f"{key_prefix}_ready")
     else:
-        summary = f"{topic['ISS']} | {topic['ISS_status']}" or "ISS"
-        if cols[6].button(summary, key=f"iss_btn_{i}"):
-            st.session_state.edit_iss_index = i
+        if col.button("ECR", key=f"btn_{key_prefix}"):
+            topic["ECR"]["expanded"] = True
 
-    # ECR
-    if st.session_state.edit_ecr_index == i:
-        with cols[7]:
-            topic["ECR_type"] = st.text_input("Type", topic["ECR_type"], key=f"ecr_type_{i}")
-            topic["ECR_status"] = st.text_input("Status", topic["ECR_status"], key=f"ecr_status_{i}")
-            topic["ECR_instance"] = st.text_input("Instance", topic["ECR_instance"], key=f"ecr_instance_{i}")
-            topic["ECR_title"] = st.text_input("Title", topic["ECR_title"], key=f"ecr_title_{i}")
-            topic["ECR_instruction"] = st.date_input("Instruction Date", topic["ECR_instruction"] or datetime.today(), key=f"instr_{i}")
-            topic["ECR_conception"] = st.date_input("Conception Date", topic["ECR_conception"] or datetime.today(), key=f"concep_{i}")
-            topic["ECR_official"] = st.date_input("Officialisation Date", topic["ECR_official"] or datetime.today(), key=f"offic_{i}")
-            topic["ECR_start"] = st.date_input("Demarrage Date", topic["ECR_start"] or datetime.today(), key=f"start_{i}")
-            topic["ECR_solde"] = st.date_input("Solde Date", topic["ECR_solde"] or datetime.today(), key=f"solde_{i}")
-            topic["ECR_ready"] = st.checkbox("Ready", topic["ECR_ready"], key=f"ready_{i}")
-            if st.button("✅", key=f"ecr_save_{i}"):
-                st.session_state.edit_ecr_index = None
+
+def simple_block(col, topic, section, key_prefix):
+    if topic[section]["expanded"]:
+        topic[section]["reference"] = col.text_input("Reference", key=f"{key_prefix}_ref")
+        topic[section]["status"] = col.text_input("Status", key=f"{key_prefix}_stat")
+        topic[section]["comment"] = col.text_area("Comment", key=f"{key_prefix}_com")
     else:
-        s = f"{topic['ECR_type']} | {topic['ECR_status']} | {topic['ECR_instance']}"
-        if cols[7].button(s or "ECR", key=f"ecr_btn_{i}"):
-            st.session_state.edit_ecr_index = i
+        if col.button(section, key=f"btn_{key_prefix}"):
+            topic[section]["expanded"] = True
 
-    short_edit("apqp", cols[8], i, topic)
-    short_edit("dec", cols[9], i, topic)
-    short_edit("fete", cols[10], i, topic)
+# Render rows
+for idx, topic in enumerate(st.session_state.topics):
+    row_cols = st.columns(col_widths)
 
-    topic["Desc"] = cols[11].text_input("", topic["Desc"], key=f"desc_{i}")
-    topic["Status"] = cols[12].text_input("", topic["Status"], key=f"status_{i}")
+    # ID and Type
+    row_cols[0].text_input("", value=topic["ID"], key=f"id_{idx}", disabled=True)
+    topic["Type"] = row_cols[1].text_input("", value=topic["Type"], key=f"type_{idx}")
+
+    gravity_dropdown(row_cols[2], "Q", topic, f"q_{idx}")
+    gravity_dropdown(row_cols[3], "C", topic, f"c_{idx}")
+    gravity_dropdown(row_cols[4], "D", topic, f"d_{idx}")
+    gravity_dropdown(row_cols[5], "P", topic, f"p_{idx}")
+
+    iss_dropdown(row_cols[6], topic, f"iss_{idx}")
+    ecr_dropdown(row_cols[7], topic, f"ecr_{idx}")
+
+    simple_block(row_cols[8], topic, "APQP", f"apqp_{idx}")
+    simple_block(row_cols[9], topic, "DEC", f"dec_{idx}")
+    simple_block(row_cols[10], topic, "FETE", f"fete_{idx}")
+
+    topic["Desc"] = row_cols[11].text_input("", value=topic["Desc"], key=f"desc_{idx}")
+    topic["Status"] = row_cols[12].text_input("", value=topic["Status"], key=f"status_{idx}")
